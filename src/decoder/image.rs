@@ -347,10 +347,17 @@ impl Image {
                     ),
                 )),
             },
-            PhotometricInterpretation::BlackIsZero | PhotometricInterpretation::WhiteIsZero
-                if self.samples == 1 =>
-            {
-                Ok(ColorType::Gray(self.bits_per_sample))
+            PhotometricInterpretation::BlackIsZero | PhotometricInterpretation::WhiteIsZero =>
+            match (self.sample_format[0], self.samples) {
+                (SampleFormat::IEEEFP, 3) => Ok(ColorType::RGB(self.bits_per_sample)),
+                (SampleFormat::IEEEFP, 4) => Ok(ColorType::RGBA(self.bits_per_sample)),
+                (_, 1) => Ok(ColorType::Gray(self.bits_per_sample)),
+                (_, _) => Err(TiffError::UnsupportedError(
+                    TiffUnsupportedError::InterpretationWithBits(
+                        self.photometric_interpretation,
+                        vec![self.bits_per_sample; self.samples as usize],
+                    )
+                ))
             }
 
             // TODO: this is bad we should not fail at this point
